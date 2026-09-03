@@ -3,22 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <title>Interação com o Mouse</title>
+
+    <style type="text/css">
+        .fora{
+            display: table;
+        }
+        .boxright{
+            margin-left: 35%;
+        }
+        .boxleft{
+            float: left;
+            width: 30%;
+        }
+    </style>
 </head>
 
 <body>
+    <div class="fora">
+        <div class="boxleft">
+            <p>Clique em duas posições para gerar uma linha.</p>
+            <p>Pressione uma das teclas para alterar a cor:</p>
+            <ul>
+                <li>0 - Branco</li> 
+                <li>1 - Vermelho</li>
+                <li>2 - Verde</li>
+                <li>3 - Azul</li>
+                <li>4 - Amarelo</li>
+                <li>5 - Ciano</li>
+                <li>6 - Magenta</li>
+                <li>7 - Laranja</li>
+                <li>8 - Roxo</li>
+                <li>9 - Cinza</li>
+            </ul>
+        </div>
 
-    <canvas id="canvas" width="600" height="600"></canvas>
 
-    <div>
+
+        <div class="boxright">
+        <canvas id="canvas" width="600" height="600"></canvas>
+
         <p id="canvasCoordinates">
             Canvas: (300, 300)
         </p>
 
         <p id="webglCoordinates">
-            WebGL: (0.000, 0.000)
+            WebGL: (0.000, 0.000)    
         </p>
+        </div>
     </div>
+    
 
+   
     <script src="main.js"></script>
 
 </body>
