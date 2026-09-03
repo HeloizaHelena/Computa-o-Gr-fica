@@ -31,9 +31,15 @@ const colorPalette = [
 let currentColorIndex = 3; // azul
 let currentColor = colorPalette[currentColorIndex];
 
-// Guarda os últimos dois pontos clicados, para poder redesenhar
-// a mesma linha com outra cor quando o usuário aperta uma tecla
-let lastLine = { x1: 0, y1: 0, x2: 0, y2: 0 };
+// Guarda a última figura reta ou triângulo, para poder
+// redesenhá-la com outra cor quando tecla 0-9
+let lastShape = { type: "line", args: [0, 0, 0, 0] };
+
+// Modo atual de desenho: r ou t
+let mode = "line";
+
+// Pontos já clicados para a fig 2 p reta, 3 p triang
+let clickPoints = [];
 
 // --------------------------------------------------
 // 1. iniciais (serão sobrescritos pela 1 chamada de drawLine)
@@ -262,13 +268,13 @@ function updateBuffersAndDraw(points) {
 // --------------------------------------------------
 
 function drawLine(x1, y1, x2, y2) {
-    lastLine = { x1, y1, x2, y2 };
+    lastShape = { type: "line", args: [x1, y1, x2, y2] };
     const points = bresenham(x1, y1, x2, y2);
     updateBuffersAndDraw(points);
 }
 
 // --------------------------------------------------
-// FUNÇÃO 2: alterar a cor da linha
+// FUNÇÃO 2: alterar a cor da fig
 // --------------------------------------------------
 
 function changeColor(index) {
@@ -277,9 +283,34 @@ function changeColor(index) {
     currentColorIndex = index;
     currentColor = colorPalette[index];
 
-    // Redesenha a linha atual (mesmas coordenadas), só muda a cor
-    const points = bresenham(lastLine.x1, lastLine.y1, lastLine.x2, lastLine.y2);
+    // Redesenha aultima figura, só muda a cor
+    redrawLastShape();
+}
+
+// ---------------------------------------------
+//Função 3: Imprimir um triangulo de 3 arestas
+// -------------------------------------------
+function drawTriangle(x1, y1, x2, y2, x3, y3) {
+    lastShape = { type: "triangle", args: [x1, y1, x2, y2, x3, y3] };
+    const points = trianglePoints(x1, y1, x2, y2, x3, y3);
     updateBuffersAndDraw(points);
+}
+
+function trianglePoints(x1, y1, x2, y2, x3, y3) {
+    const edge1 = bresenham(x1, y1, x2, y2);
+    const edge2 = bresenham(x2, y2, x3, y3);
+    const edge3 = bresenham(x3, y3, x1, y1);
+    return edge1.concat(edge2, edge3);
+}
+
+function redrawLastShape() {
+    if (lastShape.type === "line") {
+        const [x1, y1, x2, y2] = lastShape.args;
+        updateBuffersAndDraw(bresenham(x1, y1, x2, y2));
+    } else {
+        const [x1, y1, x2, y2, x3, y3] = lastShape.args;
+        updateBuffersAndDraw(trianglePoints(x1, y1, x2, y2, x3, y3));
+    }
 }
 
 // --------------------------------------------------
@@ -287,9 +318,6 @@ function changeColor(index) {
 // --------------------------------------------------
 
 canvas.addEventListener("mousedown", mouseClick, false);
-
-let firstPoint = null;
-let secondPoint = null;
 
 function mouseClick(event) {
 
@@ -304,23 +332,53 @@ function mouseClick(event) {
     webglCoordinates.textContent =
         `WebGL: (${webglX.toFixed(3)}, ${webglY.toFixed(3)})`;
 
-    if ((firstPoint !== null && secondPoint !== null) || firstPoint === null) {
-        firstPoint = { x, y };
-        secondPoint = null;
-        return; // só um ponto marcado ainda, nada a desenhar
+    clickPoints.push({ x, y });
+
+    const pontosNecessarios = (mode === "line") ? 2 : 3;
+
+    if (clickPoints.length < pontosNecessarios) {
+        return; // ainda faltam cliques para completar a figura
     }
 
-    secondPoint = { x, y };
-    drawLine(firstPoint.x, firstPoint.y, secondPoint.x, secondPoint.y);
+    if (mode === "line") {
+        drawLine(
+            clickPoints[0].x, clickPoints[0].y,
+            clickPoints[1].x, clickPoints[1].y
+        );
+    } else {
+        drawTriangle(
+            clickPoints[0].x, clickPoints[0].y,
+            clickPoints[1].x, clickPoints[1].y,
+            clickPoints[2].x, clickPoints[2].y
+        );
+    }
+
+    clickPoints = []; // pronto para a próxima figura
 }
 
+
 // --------------------------------------------------
-//  (0 a 9 trocam a cor)
+//  (0 a 9 trocam a cor); R ativa retas; T ativa triang
 // --------------------------------------------------
 
 document.addEventListener("keydown", (event) => {
-    if (event.key >= "0" && event.key <= "9") {
-        changeColor(Number(event.key));
+    const key = event.key;
+
+    if (key >= "0" && key <= "9") {
+        changeColor(Number(key));
+        return;
+    }
+
+    if (key === "r" || key === "R") {
+        mode = "line";
+        clickPoints = []; // descarta cliques de uma figura incompleta
+        return;
+    }
+
+    if (key === "t" || key === "T") {
+        mode = "triangle";
+        clickPoints = []; // descarta cliques de uma figura incompleta
+        return;
     }
 });
 
@@ -345,5 +403,5 @@ function drawScene() {
     gl.drawArrays(gl.POINTS, 0, vertices.length / numComponents);
 }
 
-// Linha inicial exigida: entre (0,0) e (0,0), na cor azul
+// Linha inicial: entre (0,0) e (0,0), na cor azul
 drawLine(0, 0, 0, 0);
