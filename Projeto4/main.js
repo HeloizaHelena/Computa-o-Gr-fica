@@ -508,7 +508,21 @@ class Waist {
         this.modelTransform = m3.identity();
     }
 
-    update(robotTransform, yPos = -1.0) {
+    update(robotTransform, yPos = -1.0, angle = 0.0) {
+    const waistTransform = m3.multiply(
+        robotTransform,
+        m3.multiply(
+            m3.translation(0.0, yPos),
+            m3.rotation(angle)
+        )
+    );
+
+    for (const part of this.parts) {
+        part.modelTransform = waistTransform;
+    }
+}
+
+    /*update(robotTransform, yPos = -1.0) {
         // Posiciona a cintura na base do tronco
         const waistTransform = m3.multiply(
             robotTransform,
@@ -518,7 +532,7 @@ class Waist {
         for (const part of this.parts) {
             part.modelTransform = waistTransform;
         }
-    }
+    }*/
 
     draw(renderer) {
         for (const part of this.parts) {
@@ -604,7 +618,7 @@ class Leg {
         this.hipJoint = new SceneObject(joints(), jointColor);
         this.lowerLeg = new SceneObject(lowerLimbVertices(this.lowerLength, 0.09), color);
         this.kneeJoint = new SceneObject(joints(), jointColor);
-        this.foot = new SceneObject(footVertices(0.2 * this.side, 0.05), jointColor);
+        this.foot = new SceneObject(footVertices(0.3 * this.side, 0.15), [0.0, 0.7, 0.1]);
     }
 
     update(robotTransform, phase) {
@@ -648,16 +662,16 @@ class Robot {
         this.tx = tx;
         this.ty = ty;
 
-        const limbColor = new Float32Array([0.2, 0.2, 0.2]);
-        const jointColor = new Float32Array([0.5, 0.5, 0.5]);
+        const limbColor = new Float32Array([0.5, 0.5, 0.55]);
+        const jointColor = new Float32Array([0.4, 0.4, 0.4]);
 
-        this.torso = new SceneObject(torsoVertices(), new Float32Array([0.2, 0.22, 0.2]));
+        this.torso = new SceneObject(torsoVertices(), new Float32Array([1, 1, 0.0]));
 
         // Nova cabeça composta (com escala 0.55 para caber no corpo)
         this.head = new Head(0.6);
 
         // Cria a cintura posicionada entre o tronco e as pernas
-        this.waist = new Waist(0.35, 0.3, 0.15, limbColor, [0.2, 0.2, 0.2]);
+        this.waist = new Waist(0.35, 0.3, 0.15, [1, 0, 0], [1, 0, 0]);
 
         const armAngle = -25 * Math.PI / 180;
 
@@ -668,16 +682,26 @@ class Robot {
     }
 
     animate(t) {
-        const robotTransform = m3.translation(this.tx, this.ty);
+        // Ângulo de rotação do corpo em torno do próprio eixo (efeito de "giro/torção")
+        const bodyAngle = 0.1 * Math.sin(t);
+
+        const robotTransform = m3.multiply(
+            m3.translation(this.tx, this.ty),
+            m3.rotation(bodyAngle)
+        );
 
         this.torso.modelTransform = robotTransform;
         
+        
         // Atualiza a cabeça inteira
-        this.head.update(robotTransform);
-        this.waist.update(robotTransform, -0.7); // Anima junto com o corpo
+        this.head.update(robotTransform, 0.1*(Math.cos(t)));
+        const waistAngle = 0.1 * Math.sin(5*t); // giro só da cintura
+        this.waist.update(robotTransform, -0.7 + 0.03 * Math.cos(5*t), waistAngle);
 
-        this.rightArm.update(robotTransform, t);
-        this.leftArm.update(robotTransform, t);
+
+
+        this.rightArm.update(robotTransform, 2*t);
+        this.leftArm.update(robotTransform, 1.5*t);
         this.rightLeg.update(robotTransform, t);
         this.leftLeg.update(robotTransform, t);
     }
